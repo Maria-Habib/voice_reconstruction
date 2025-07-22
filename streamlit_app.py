@@ -12,8 +12,8 @@ API_URL = "http://localhost:8000"
 
 #public_url = ngrok.connect(port = '80')
 
-AUDIOS_PATH = "/home/maria/tts/data/uclass_v1"
-DATA_FILE = "data/precomputed_ASR_TTS_uclass1.json"
+AUDIOS_PATH = "uclass_v1"
+DATA_FILE = "precomputed_ASR_TTS_uclass1.json"
 
 st.set_page_config(layout="wide")
 
