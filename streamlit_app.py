@@ -89,7 +89,7 @@ if st.button("Submit Labels"):
     except Exception as e:
         st.error(f"❌ Failed to save labels: {e}")
 
-json_data = json.dump(st.session_state.labels, f, indent=2)
+json_data = json.dump(st.session_state.labels, indent=2)
 st.download_button("Download Labels", json_data, file_name="saved_labels.json", mime="application/json")
 
 # import streamlit as st
