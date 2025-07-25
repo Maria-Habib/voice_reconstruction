@@ -36,7 +36,7 @@ with open(DATA_FILE, "r") as f:
     precomputed_data = json.load(f)
 
 audio_files = sorted(precomputed_data.keys())
-batch_size = 10
+batch_size = 20
 total_files = len(audio_files)
 total_pages = (total_files + batch_size - 1) // batch_size  # ceiling div
 
