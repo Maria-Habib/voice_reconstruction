@@ -70,8 +70,10 @@ if "labels" not in st.session_state:
 for audio_file in batch:
     st.markdown("---")
     st.write(f"### {audio_file}")
+    
+    BASE_AUDIO_DIR = "/mount/src/voice_reconstruction/uclass_v1"
+    audio_path = os.path.join(BASE_AUDIO_DIR, audio_file)
 
-    audio_path = os.path.join(AUDIOS_PATH, audio_file)
     # tts_path = precomputed_data[audio_file]["tts_audio"]
  
     tts_path = os.path.join(AUDIOS_PATH, precomputed_data[audio_file]["tts_audio"])
