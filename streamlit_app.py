@@ -36,18 +36,35 @@ with open(DATA_FILE, "r") as f:
     precomputed_data = json.load(f)
 
 audio_files = sorted(precomputed_data.keys())
-
-# Pagination setup
+total_files = len(audio_files)
 batch_size = 10
-max_idx = len(audio_files) - 1
-start_idx = st.number_input("Page", min_value=0, max_value=max_idx, step=batch_size)
+total_pages = (total_files + batch_size - 1) // batch_size  # Round up
+
+# Pagination state
+if "page_idx" not in st.session_state:
+    st.session_state.page_idx = 0
+
+# Navigation buttons
+col1, col2, col3 = st.columns([1, 2, 1])
+with col1:
+    if st.button("⬅️ Previous") and st.session_state.page_idx > 0:
+        st.session_state.page_idx -= 1
+with col3:
+    if st.button("Next ➡️") and st.session_state.page_idx < total_pages - 1:
+        st.session_state.page_idx += 1
+
+# Show current page index
+st.write(f"### Page {st.session_state.page_idx + 1} of {total_pages}")
+
+# Get batch
+start_idx = st.session_state.page_idx * batch_size
 batch = audio_files[start_idx:start_idx + batch_size]
 
 # Session state for labels
 if "labels" not in st.session_state:
     st.session_state.labels = {}
 
-# UI for annotation
+# Annotation UI
 for audio_file in batch:
     st.markdown("---")
     st.write(f"### {audio_file}")
@@ -80,17 +97,123 @@ for audio_file in batch:
         "annotator": annotator
     }
 
-# Save labels locally
-if st.button("Submit Labels"):
-    try:
-        with open(LABELS_OUTPUT_FILE, "w") as f:
-            json.dump(st.session_state.labels, f, indent=2)
-        st.success("✅ All labels saved successfully!")
-    except Exception as e:
-        st.error(f"❌ Failed to save labels: {e}")
+# Save and download section
+st.markdown("---")
+col_save, col_download = st.columns(2)
 
-json_data = json.dumps(st.session_state.labels, indent=2)
-st.download_button("Download Labels", json_data, file_name="saved_labels.json", mime="application/json")
+with col_save:
+    if st.button("✅ Submit All Labels"):
+        try:
+            with open(LABELS_OUTPUT_FILE, "w") as f:
+                json.dump(st.session_state.labels, f, indent=2)
+            st.success("✅ All labels saved successfully!")
+        except Exception as e:
+            st.error(f"❌ Failed to save labels: {e}")
+
+with col_download:
+    json_data = json.dumps(st.session_state.labels, indent=2)
+    st.download_button("⬇️ Download Labels", json_data, file_name="saved_labels.json", mime="application/json")
+
+
+
+
+
+# import streamlit as st
+# import os
+# import json
+# from io import BytesIO
+
+# # Streamlit setup
+# st.set_page_config(layout="wide")
+# st.title("Voice Disorder Annotation")
+
+# AUDIOS_PATH = "/mount/src/voice_reconstruction/uclass_v1"
+# DATA_FILE = "precomputed_ASR_TTS_uclass1.json"
+# LABELS_OUTPUT_FILE = "saved_labels.json"
+
+# # Load audio safely
+# def load_audio_bytes(path):
+#     try:
+#         with open(path, "rb") as f:
+#             return BytesIO(f.read())
+#     except Exception as e:
+#         st.error(f"Error loading audio: {path}\n{e}")
+#         return None
+
+# # Input fields for annotator ID and mother tongue
+# col1, col2 = st.columns(2)
+# with col1:
+#     annotator = st.text_input("Enter your annotator ID or Name", key="annotator_id")
+# with col2:
+#     mother_tongue = st.text_input("Enter your mother tongue language", key="mother_tongue")
+
+# if not annotator or not mother_tongue:
+#     st.warning("Please enter both your annotator ID and mother tongue to continue.")
+#     st.stop()
+
+# # Load precomputed results
+# with open(DATA_FILE, "r") as f:
+#     precomputed_data = json.load(f)
+
+# audio_files = sorted(precomputed_data.keys())
+
+# # Pagination setup
+# batch_size = 10
+# max_idx = len(audio_files) - 1
+# start_idx = st.number_input("Page", min_value=0, max_value=max_idx, step=batch_size)
+# batch = audio_files[start_idx:start_idx + batch_size]
+
+# # Session state for labels
+# if "labels" not in st.session_state:
+#     st.session_state.labels = {}
+
+# # UI for annotation
+# for audio_file in batch:
+#     st.markdown("---")
+#     st.write(f"### {audio_file}")
+
+#     audio_path = os.path.join(AUDIOS_PATH, audio_file)
+#     tts_path = os.path.join(AUDIOS_PATH, precomputed_data[audio_file]["tts_audio"])
+#     transcription = precomputed_data[audio_file]["transcription"]
+
+#     st.write("Disordered Voice:")
+#     dis_audio = load_audio_bytes(audio_path)
+#     if dis_audio:
+#         st.audio(dis_audio)
+
+#     st.text_area("Transcription", transcription, height=100, key=f"transcription_display_{audio_file}")
+
+#     st.write("Reconstructed Voice:")
+#     tts_audio = load_audio_bytes(tts_path)
+#     if tts_audio:
+#         st.audio(tts_audio)
+
+#     label = st.radio(
+#         "Are the speakers the same?",
+#         ("same", "different"),
+#         key=f"label_{audio_file}"
+#     )
+
+#     st.session_state.labels[audio_file] = {
+#         "label": label,
+#         "mother_tongue": mother_tongue,
+#         "annotator": annotator
+#     }
+
+# # Save labels locally
+# if st.button("Submit Labels"):
+#     try:
+#         with open(LABELS_OUTPUT_FILE, "w") as f:
+#             json.dump(st.session_state.labels, f, indent=2)
+#         st.success("✅ All labels saved successfully!")
+#     except Exception as e:
+#         st.error(f"❌ Failed to save labels: {e}")
+
+# json_data = json.dumps(st.session_state.labels, indent=2)
+# st.download_button("Download Labels", json_data, file_name="saved_labels.json", mime="application/json")
+
+
+
 
 # import streamlit as st
 # import requests
