@@ -1,111 +1,75 @@
-import streamlit as st
-import os
+import gradio as gr
 import json
-from io import BytesIO
+import os
 
-# Streamlit setup
-st.set_page_config(layout="wide")
-st.title("Voice Disorder Annotation")
+# Load the precomputed JSON
+with open("precomputed_ASR_TTS_uclass1.json", "r") as f:
+    data = json.load(f)
 
-AUDIOS_PATH = "/mount/src/voice_reconstruction/uclass_v1"
-DATA_FILE = "precomputed_ASR_TTS_uclass1.json"
-LABELS_OUTPUT_FILE = "saved_labels.json"
+# Convert to list for indexing
+keys = list(data.keys())
+total = len(keys)
 
-# Load audio safely
-def load_audio_bytes(path):
-    try:
-        with open(path, "rb") as f:
-            return BytesIO(f.read())
-    except Exception as e:
-        st.error(f"Error loading audio: {path}\n{e}")
-        return None
+# To store annotations
+annotations = {}
 
-# Input fields for annotator ID and mother tongue
-col1, col2 = st.columns(2)
-with col1:
-    annotator = st.text_input("Enter your annotator ID or Name", key="annotator_id")
-with col2:
-    mother_tongue = st.text_input("Enter your mother tongue language", key="mother_tongue")
-
-if not annotator or not mother_tongue:
-    st.warning("Please enter both your annotator ID and mother tongue to continue.")
-    st.stop()
-
-# Load precomputed results
-with open(DATA_FILE, "r") as f:
-    precomputed_data = json.load(f)
-
-audio_files = sorted(precomputed_data.keys())
-
-# Pagination setup
-batch_size = 10
-total_batches = (len(audio_files) + batch_size - 1) // batch_size
-
-if "page" not in st.session_state:
-    st.session_state.page = 0
-
-start_idx = st.session_state.page * batch_size
-end_idx = start_idx + batch_size
-batch = audio_files[start_idx:end_idx]
-
-# Session state for labels
-if "labels" not in st.session_state:
-    st.session_state.labels = {}
-
-# UI for annotation
-for audio_file in batch:
-    st.markdown("---")
-    st.write(f"### {audio_file}")
-
-    audio_path = os.path.join(AUDIOS_PATH, audio_file)
-    tts_path = os.path.join(AUDIOS_PATH, precomputed_data[audio_file]["tts_audio"])
-    transcription = precomputed_data[audio_file]["transcription"]
-
-    st.write("Disordered Voice:")
-    dis_audio = load_audio_bytes(audio_path)
-    if dis_audio:
-        st.audio(dis_audio)
-
-    st.text_area("Transcription", transcription, height=100, key=f"transcription_display_{audio_file}")
-
-    st.write("Reconstructed Voice:")
-    tts_audio = load_audio_bytes(tts_path)
-    if tts_audio:
-        st.audio(tts_audio)
-
-    label = st.radio(
-        "Are the speakers the same?",
-        ("same", "different"),
-        key=f"label_{audio_file}"
+def display_sample(index):
+    key = keys[index]
+    entry = data[key]
+    transcription = entry["transcription"]
+    original_audio_path = key
+    tts_audio_path = entry["tts_audio"]
+    return (
+        f"{index+1}/{total}", 
+        original_audio_path, 
+        transcription, 
+        tts_audio_path
     )
 
-    st.session_state.labels[audio_file] = {
-        "label": label,
-        "mother_tongue": mother_tongue,
-        "annotator": annotator
-    }
+def annotate(index, label):
+    key = keys[index]
+    annotations[key] = label
+    index = (index + 1) % total
+    return (*display_sample(index), index)
 
-# --- Page Navigation Controls ---
-st.markdown("---")
-col1, col2, col3 = st.columns([1, 2, 1])
-with col1:
-    if st.session_state.page > 0:
-        if st.button("⬅️ Previous", type="secondary"):
-            st.session_state.page -= 1
-            st.experimental_rerun()
-with col2:
-    st.markdown(f"<p style='text-align:center;'>Page {st.session_state.page + 1} of {total_batches}</p>", unsafe_allow_html=True)
-with col3:
-    if end_idx < len(audio_files):
-        if st.button("Next ➡️", type="primary"):
-            st.session_state.page += 1
-            st.experimental_rerun()
+def go_to_page(page_input):
+    try:
+        page = int(page_input.strip()) - 1
+        if page < 0 or page >= total:
+            raise ValueError
+    except:
+        return gr.update(value="Invalid page"), *display_sample(0), 0
+    return gr.update(value=f"{page+1}/{total}"), *display_sample(page), page
 
-# Save labels file (auto-ready for download)
-json_data = json.dumps(st.session_state.labels, indent=2)
-st.download_button("Download Labels", json_data, file_name="saved_labels.json", mime="application/json")
+with gr.Blocks() as demo:
+    index_state = gr.State(0)
 
+    with gr.Row():
+        page_label = gr.Textbox(value="1/{}".format(total), label="Page", interactive=True)
+        go_btn = gr.Button("Go")
 
+    with gr.Row():
+        original_audio = gr.Audio(label="Original Audio", type="filepath")
+        tts_audio = gr.Audio(label="TTS Audio", type="filepath")
+
+    transcription_text = gr.Textbox(label="Transcription", lines=4)
+
+    with gr.Row():
+        same_btn = gr.Button("✅ Same Speaker", variant="primary")
+        diff_btn = gr.Button("❌ Different Speaker", variant="stop")
+
+    same_btn.click(fn=annotate, inputs=[index_state, gr.Textbox(value="same", visible=False)], 
+                   outputs=[page_label, original_audio, transcription_text, tts_audio, index_state])
+    diff_btn.click(fn=annotate, inputs=[index_state, gr.Textbox(value="different", visible=False)], 
+                   outputs=[page_label, original_audio, transcription_text, tts_audio, index_state])
+    go_btn.click(fn=go_to_page, inputs=page_label, 
+                 outputs=[page_label, original_audio, transcription_text, tts_audio, index_state])
+
+    # Load first sample
+    demo.load(fn=display_sample, inputs=index_state, 
+              outputs=[page_label, original_audio, transcription_text, tts_audio])
+
+demo.launch()
 
 
 
