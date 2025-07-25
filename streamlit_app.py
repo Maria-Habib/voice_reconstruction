@@ -70,7 +70,7 @@ for audio_file in batch:
 
     from pathlib import Path
 
-    audio_path = Path("/mount/src/voice_reconstruction/uclass_v1/F_0050_10y9m_1.wav")
+    audio_path = Path("/mount/src/voice_reconstruction/uclass_v1/tts_F_0050_10y9m_1.wav")
     
     # Check if file exists
     if not audio_path.exists():
