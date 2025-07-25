@@ -68,6 +68,7 @@ if "labels" not in st.session_state:
 
 # UI for displaying and annotating audio files
 for audio_file in batch:
+    audio_file = audio_file.split("/")[-1]
     st.markdown("---")
     st.write(f"### {audio_file}")
     
