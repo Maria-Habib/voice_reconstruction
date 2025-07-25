@@ -8,7 +8,7 @@ st.set_page_config(layout="wide")
 st.title("Voice Disorder Annotation")
 
 AUDIOS_PATH = "/mount/src/voice_reconstruction/uclass_v1"
-DATA_FILE = "precomputed_ASR_TTS_uclass1.json"
+DATA_FILE = "precomputed_uclass_3.json"
 LABELS_OUTPUT_FILE = "saved_labels.json"
 
 # Load audio safely
