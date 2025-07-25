@@ -97,7 +97,7 @@ for audio_file in batch:
 st.markdown("---")
 
 # Pagination controls at the bottom
-col_prev, col_page, col_next = st.columns([1, 2, 1])
+col_prev, col_page, col_next = st.columns([1, 1, 1])
 
 with col_prev:
     if st.button("⬅️ Previous"):
