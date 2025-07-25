@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 import os
 import json
-
+from io import BytesIO
 
 ngrok_api_key = "2xEPEjvSvamX0iItl5WixghrbiT_2KDJEaPiDXv8eJtVc1Wsd"
 API_URL = "http://localhost:8000"
@@ -19,6 +19,16 @@ st.set_page_config(layout="wide")
 
 
 st.title("Voice Disorder Annotation")
+
+
+def load_audio_bytes(path):
+    try:
+        with open(path, "rb") as f:
+            return BytesIO(f.read())
+    except Exception as e:
+        st.error(f"Error loading audio: {path}\n{e}")
+        return None
+        
 
 # Input fields for annotator ID and mother tongue
 col1, col2 = st.columns(2)
@@ -62,43 +72,30 @@ for audio_file in batch:
     st.write(f"### {audio_file}")
 
     audio_path = os.path.join(AUDIOS_PATH, audio_file)
-    tts_path = precomputed_data[audio_file]["tts_audio"]
+    # tts_path = precomputed_data[audio_file]["tts_audio"]
+ 
+    tts_path = os.path.join(AUDIOS_PATH, precomputed_data[audio_file]["tts_audio"])
+
     transcription = precomputed_data[audio_file]["transcription"]
 
     # Display audio sample, transcription, and TTS audio
     st.write(f"Disordered Voice:")
-
-    from pathlib import Path
-
-    audio_path = Path("/mount/src/voice_reconstruction/uclass_v1/tts_F_0050_10y9m_1.wav")
+    # st.audio(audio_path)
+    # st.write("Disordered Voice:")
     
-    # Check if file exists
-    if not audio_path.exists():
-        st.error(f"❌ File does not exist: {audio_path}")
-        st.stop()
+    dis_audio = load_audio_bytes(audio_path)
+    if dis_audio:
+        st.audio(dis_audio)
     
-    # Check file size
-    if audio_path.stat().st_size == 0:
-        st.error(f"❌ File is empty: {audio_path}")
-        st.stop()
-    
-    # Try reading manually
-    try:
-        with open(audio_path, "rb") as f:
-            audio_bytes = f.read()
-        st.success(f"✅ File exists and is readable: {audio_path}")
-    except Exception as e:
-        st.error(f"❌ File cannot be read: {e}")
-        st.stop()
-    
-    # If it worked, play audio
-    st.audio(audio_bytes)
-
-    
-    st.audio(audio_path)
     st.text_area("Transcription", transcription, height=100, key=f"transcription_display_{audio_file}")
-    st.write(f"Reconstructed Voice:")
-    st.audio(tts_path)
+
+    st.write("Reconstructed Voice:")
+    tts_audio = load_audio_bytes(tts_path)
+    if tts_audio:
+        st.audio(tts_audio)
+    
+    # st.write(f"Reconstructed Voice:")
+    # st.audio(tts_path)
 
     # Collect label from the user
     label = st.radio(
