@@ -11,8 +11,8 @@ from models.tts_utils import generate_tts
 app = FastAPI()
 
 #DATA_PATH = "data/results.json"
-AUDIOS_PATH = "/home/maria/tts/data/uclass_v1"
-SAVE_DIR = "saved_labels_uclass1.json"
+AUDIOS_PATH = "/mount/src/voice_reconstruction/uclass_v1"
+SAVE_DIR = "/mount/src/voice_reconstruction/saved_labels_uclass1.json"
 LANGUAGE = 'en'
 
 app.add_middleware(
