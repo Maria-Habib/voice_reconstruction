@@ -67,7 +67,9 @@ for audio_file in batch:
 
     # Display audio sample, transcription, and TTS audio
     st.write(f"Disordered Voice:")
-    st.write(f"Loading audio from: {audio_path}")
+    audio_path = os.path.abspath(audio_path)
+    st.write(audio_path)
+    
     st.audio(audio_path)
     st.text_area("Transcription", transcription, height=100, key=f"transcription_display_{audio_file}")
     st.write(f"Reconstructed Voice:")
