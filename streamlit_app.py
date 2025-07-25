@@ -67,8 +67,33 @@ for audio_file in batch:
 
     # Display audio sample, transcription, and TTS audio
     st.write(f"Disordered Voice:")
-    # audio_path = os.path.abspath(audio_path)
-    # st.write(audio_path)
+
+    from pathlib import Path
+
+    audio_path = Path("/mount/src/voice_reconstruction/uclass_v1/F_0050_10y9m_1.wav")
+    
+    # Check if file exists
+    if not audio_path.exists():
+        st.error(f"❌ File does not exist: {audio_path}")
+        st.stop()
+    
+    # Check file size
+    if audio_path.stat().st_size == 0:
+        st.error(f"❌ File is empty: {audio_path}")
+        st.stop()
+    
+    # Try reading manually
+    try:
+        with open(audio_path, "rb") as f:
+            audio_bytes = f.read()
+        st.success(f"✅ File exists and is readable: {audio_path}")
+    except Exception as e:
+        st.error(f"❌ File cannot be read: {e}")
+        st.stop()
+    
+    # If it worked, play audio
+    st.audio(audio_bytes)
+
     
     st.audio(audio_path)
     st.text_area("Transcription", transcription, height=100, key=f"transcription_display_{audio_file}")
