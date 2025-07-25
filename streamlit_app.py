@@ -12,7 +12,7 @@ API_URL = "http://localhost:8000"
 
 #public_url = ngrok.connect(port = '80')
 
-AUDIOS_PATH = "uclass_v1"
+AUDIOS_PATH = "/mount/src/voice_reconstruction/uclass_v1"
 DATA_FILE = "precomputed_ASR_TTS_uclass1.json"
 
 st.set_page_config(layout="wide")
@@ -67,8 +67,8 @@ for audio_file in batch:
 
     # Display audio sample, transcription, and TTS audio
     st.write(f"Disordered Voice:")
-    audio_path = os.path.abspath(audio_path)
-    st.write(audio_path)
+    # audio_path = os.path.abspath(audio_path)
+    # st.write(audio_path)
     
     st.audio(audio_path)
     st.text_area("Transcription", transcription, height=100, key=f"transcription_display_{audio_file}")
