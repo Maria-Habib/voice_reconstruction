@@ -1,119 +1,65 @@
 import streamlit as st
-import os
 import json
-from io import BytesIO
+import os
 
-# Streamlit setup
-st.set_page_config(layout="wide")
-st.title("Voice Disorder Annotation")
-
-AUDIOS_PATH = "/mount/src/voice_reconstruction/uclass_v1"
-DATA_FILE = "precomputed_ASR_TTS_uclass1.json"
 LABELS_OUTPUT_FILE = "saved_labels.json"
 
-# Load audio safely
-def load_audio_bytes(path):
+# Dummy data for testing
+all_files = [...]  # List of file names like ['F_0050_10y9m_1.wav', ...]
+st.session_state.labels = st.session_state.get("labels", {})
+st.session_state.page = st.session_state.get("page", 0)
+
+# Automatically save labels on change
+def auto_save_labels():
     try:
-        with open(path, "rb") as f:
-            return BytesIO(f.read())
+        with open(LABELS_OUTPUT_FILE, "w") as f:
+            json.dump(st.session_state.labels, f, indent=2)
     except Exception as e:
-        st.error(f"Error loading audio: {path}\n{e}")
-        return None
+        st.error(f"❌ Failed to save labels: {e}")
 
-# Input fields for annotator ID and mother tongue
-col1, col2 = st.columns(2)
+# Display current audio and options
+file = all_files[st.session_state.page]
+st.write(f"### File {st.session_state.page + 1} of {len(all_files)}")
+st.audio(f"audio_folder/{file}")
+
+# Label selection
+label = st.radio("Same Speaker?", ["Yes", "No"], key=file)
+st.session_state.labels[file] = label
+auto_save_labels()  # Save after selection
+
+# Navigation controls at the bottom with colored buttons
+col1, col2, col3 = st.columns([1, 5, 1])
+
 with col1:
-    annotator = st.text_input("Enter your annotator ID or Name", key="annotator_id")
+    if st.session_state.page > 0:
+        st.button("⬅️ Prev", on_click=lambda: st.session_state.update({"page": st.session_state.page - 1}))
+
 with col2:
-    mother_tongue = st.text_input("Enter your mother tongue language", key="mother_tongue")
+    # Colored page buttons
+    page_buttons = st.columns(len(all_files))
+    for i, col in enumerate(page_buttons):
+        color = "#D3E4CD" if i == st.session_state.page else "#FAD4D4"
+        col.markdown(
+            f"""
+            <div style='text-align: center; margin: 4px;'>
+                <button style='background-color: {color}; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer;'
+                        onclick="document.querySelector('input[value={i}]').click();">
+                    {i+1}
+                </button>
+            </div>
+            """, unsafe_allow_html=True)
 
-if not annotator or not mother_tongue:
-    st.warning("Please enter both your annotator ID and mother tongue to continue.")
-    st.stop()
+        # Create hidden buttons to trigger page change
+        st.hidden_input = st.radio("", list(range(len(all_files))), index=st.session_state.page, label_visibility="collapsed", key="hidden_radio")
+        st.session_state.page = st.hidden_input
 
-# Load precomputed results
-with open(DATA_FILE, "r") as f:
-    precomputed_data = json.load(f)
-
-audio_files = sorted(precomputed_data.keys())
-total_files = len(audio_files)
-batch_size = 10
-total_pages = (total_files + batch_size - 1) // batch_size  # Round up
-
-# Pagination state
-if "page_idx" not in st.session_state:
-    st.session_state.page_idx = 0
-
-# Navigation buttons
-col1, col2, col3 = st.columns([1, 2, 1])
-with col1:
-    if st.button("⬅️ Previous") and st.session_state.page_idx > 0:
-        st.session_state.page_idx -= 1
 with col3:
-    if st.button("Next ➡️") and st.session_state.page_idx < total_pages - 1:
-        st.session_state.page_idx += 1
+    if st.session_state.page < len(all_files) - 1:
+        st.button("Next ➡️", on_click=lambda: st.session_state.update({"page": st.session_state.page + 1}))
 
-# Show current page index
-st.write(f"### Page {st.session_state.page_idx + 1} of {total_pages}")
-
-# Get batch
-start_idx = st.session_state.page_idx * batch_size
-batch = audio_files[start_idx:start_idx + batch_size]
-
-# Session state for labels
-if "labels" not in st.session_state:
-    st.session_state.labels = {}
-
-# Annotation UI
-for audio_file in batch:
-    st.markdown("---")
-    st.write(f"### {audio_file}")
-
-    audio_path = os.path.join(AUDIOS_PATH, audio_file)
-    tts_path = os.path.join(AUDIOS_PATH, precomputed_data[audio_file]["tts_audio"])
-    transcription = precomputed_data[audio_file]["transcription"]
-
-    st.write("Disordered Voice:")
-    dis_audio = load_audio_bytes(audio_path)
-    if dis_audio:
-        st.audio(dis_audio)
-
-    st.text_area("Transcription", transcription, height=100, key=f"transcription_display_{audio_file}")
-
-    st.write("Reconstructed Voice:")
-    tts_audio = load_audio_bytes(tts_path)
-    if tts_audio:
-        st.audio(tts_audio)
-
-    label = st.radio(
-        "Are the speakers the same?",
-        ("same", "different"),
-        key=f"label_{audio_file}"
-    )
-
-    st.session_state.labels[audio_file] = {
-        "label": label,
-        "mother_tongue": mother_tongue,
-        "annotator": annotator
-    }
-
-# Save and download section
-st.markdown("---")
-col_save, col_download = st.columns(2)
-
-with col_save:
-    if st.button("✅ Submit All Labels"):
-        try:
-            with open(LABELS_OUTPUT_FILE, "w") as f:
-                json.dump(st.session_state.labels, f, indent=2)
-            st.success("✅ All labels saved successfully!")
-        except Exception as e:
-            st.error(f"❌ Failed to save labels: {e}")
-
-with col_download:
-    json_data = json.dumps(st.session_state.labels, indent=2)
-    st.download_button("⬇️ Download Labels", json_data, file_name="saved_labels.json", mime="application/json")
-
+# Download button
+json_data = json.dumps(st.session_state.labels, indent=2)
+st.download_button("📥 Download Labels", json_data, file_name="saved_labels.json", mime="application/json")
 
 
 
