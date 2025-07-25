@@ -1,66 +1,87 @@
 import streamlit as st
-import json
 import os
+import json
+from pathlib import Path
+import glob
 
-LABELS_OUTPUT_FILE = "saved_labels.json"
+# Constants
+AUDIO_FOLDER = Path("voice_reconstruction/audio")
+TRANSCRIPTIONS_FILE = Path("voice_reconstruction/transcriptions.json")
+LABELS_OUTPUT_FILE = Path("voice_reconstruction/labels.json")
 
-# Dummy data for testing
-all_files = [...]  # List of file names like ['F_0050_10y9m_1.wav', ...]
-st.session_state.labels = st.session_state.get("labels", {})
-st.session_state.page = st.session_state.get("page", 0)
+# Load data
+audio_files = sorted(glob.glob(str(AUDIO_FOLDER / "*.wav")))
+with open(TRANSCRIPTIONS_FILE, "r") as f:
+    transcriptions = json.load(f)
 
-# Automatically save labels on change
-def auto_save_labels():
-    try:
-        with open(LABELS_OUTPUT_FILE, "w") as f:
-            json.dump(st.session_state.labels, f, indent=2)
-    except Exception as e:
-        st.error(f"❌ Failed to save labels: {e}")
+# Session state
+if "current_page" not in st.session_state:
+    st.session_state.current_page = 0
+if "labels" not in st.session_state:
+    st.session_state.labels = {}
 
-# Display current audio and options
-file = all_files[st.session_state.page]
-st.write(f"### File {st.session_state.page + 1} of {len(all_files)}")
-st.audio(f"audio_folder/{file}")
+total_pages = len(audio_files)
 
-# Label selection
-label = st.radio("Same Speaker?", ["Yes", "No"], key=file)
-st.session_state.labels[file] = label
-auto_save_labels()  # Save after selection
+# Page content rendering
+def render_page(index):
+    audio_path = audio_files[index]
+    audio_filename = os.path.basename(audio_path)
+    transcription = transcriptions.get(audio_filename, "No transcription found")
 
-# Navigation controls at the bottom with colored buttons
-col1, col2, col3 = st.columns([1, 5, 1])
+    st.header(f"Labeling Audio Sample {index+1} of {total_pages}")
+    st.audio(audio_path)
+    st.markdown(f"**Transcription:** {transcription}")
+
+    # Load previous label if exists
+    prev_label = st.session_state.labels.get(audio_filename, "")
+    label = st.radio(
+        "Same speaker as TTS?",
+        ["", "Yes", "No"],
+        index=["", "Yes", "No"].index(prev_label) if prev_label in ["Yes", "No"] else 0,
+        key=f"radio_{index}"
+    )
+
+    # Save current label
+    if label:
+        st.session_state.labels[audio_filename] = label
+
+# Display current page
+render_page(st.session_state.current_page)
+
+# --- Custom HTML Pagination ---
+st.markdown("<hr>", unsafe_allow_html=True)
+st.markdown("### Navigation", unsafe_allow_html=True)
+
+col1, col2, col3 = st.columns([1, 6, 1])
 
 with col1:
-    if st.session_state.page > 0:
-        st.button("⬅️ Prev", on_click=lambda: st.session_state.update({"page": st.session_state.page - 1}))
+    if st.session_state.current_page > 0:
+        if st.button("⬅️ Prev"):
+            st.session_state.current_page -= 1
 
 with col2:
-    # Colored page buttons
-    page_buttons = st.columns(len(all_files))
-    for i, col in enumerate(page_buttons):
-        color = "#D3E4CD" if i == st.session_state.page else "#FAD4D4"
-        col.markdown(
-            f"""
-            <div style='text-align: center; margin: 4px;'>
-                <button style='background-color: {color}; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer;'
-                        onclick="document.querySelector('input[value={i}]').click();">
-                    {i+1}
-                </button>
-            </div>
-            """, unsafe_allow_html=True)
-
-        # Create hidden buttons to trigger page change
-        st.hidden_input = st.radio("", list(range(len(all_files))), index=st.session_state.page, label_visibility="collapsed", key="hidden_radio")
-        st.session_state.page = st.hidden_input
+    page_buttons = ""
+    for i in range(total_pages):
+        color = "#4CAF50" if i == st.session_state.current_page else "#f0f0f0"
+        page_buttons += f"""
+            <button style='background-color:{color}; border:1px solid #ccc; padding:5px 10px; margin:2px; cursor:pointer'
+            onclick="document.querySelectorAll('button')[{i + 1}].click();">
+            {i + 1}</button>
+        """
+    st.markdown(f"<div style='text-align:center'>{page_buttons}</div>", unsafe_allow_html=True)
 
 with col3:
-    if st.session_state.page < len(all_files) - 1:
-        st.button("Next ➡️", on_click=lambda: st.session_state.update({"page": st.session_state.page + 1}))
+    if st.session_state.current_page < total_pages - 1:
+        if st.button("Next ➡️"):
+            st.session_state.current_page += 1
 
-# Download button
+# Save labels to file immediately
+with open(LABELS_OUTPUT_FILE, "w") as f:
+    json.dump(st.session_state.labels, f, indent=2)
+
+# Optional download
 json_data = json.dumps(st.session_state.labels, indent=2)
-st.download_button("📥 Download Labels", json_data, file_name="saved_labels.json", mime="application/json")
-
+st.download_button("Download Labels", json_data, file_name="saved_labels.json", mime="application/json")
 
 
 
