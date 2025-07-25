@@ -6,7 +6,7 @@ import glob
 
 # Constants
 AUDIO_FOLDER = Path("voice_reconstruction/audio")
-TRANSCRIPTIONS_FILE = Path("voice_reconstruction/transcriptions.json")
+TRANSCRIPTIONS_FILE = Path("voice_reconstruction/precomputed_ASR_TTS_uclass1.json")
 LABELS_OUTPUT_FILE = Path("voice_reconstruction/labels.json")
 
 # Load data
