@@ -7,8 +7,8 @@ from io import BytesIO
 st.set_page_config(layout="wide")
 st.title("Voice Disorder Annotation")
 
-AUDIOS_PATH = "/mount/src/voice_reconstruction/uclass_v1"
-DATA_FILE = "precomputed_uclass_2.json"
+AUDIOS_PATH = "/mount/src/voice_reconstruction/svd_pathology"
+DATA_FILE = "precomputed_svd.json"
 LABELS_OUTPUT_FILE = "saved_labels.json"
 
 # Load audio safely
